@@ -480,7 +480,7 @@ class ELF:
             elif ei_data == ELFFlags.ELFDATA2MSB: sym = Elf32_Sym_MSB.from_buffer_copy(self.binary[off:])
         elif self.getArchMode() == 64:
             if   ei_data == ELFFlags.ELFDATA2LSB: sym = Elf64_Sym_LSB.from_buffer_copy(self.binary[off:])
-            elif ei_data == ELFFlags.ELFDATA2MSB: sym = Elf64_Sym_MSB.from_buffer_copy(self.binary[off:])
+            elif ei_data == ELFFlags.ELFDATA2MSB: sym = Elf64_Sym_MSB.from_buffer_copy(self.binaryGetInputFilePath[off:])
         return sym
 
     def get_entrypoint(self):
@@ -683,7 +683,7 @@ def write_symbols(input_file, output_file, symbols):
         log(traceback.format_exc())
 
 def ida_fcn_filter(func_ea):
-    if SegName(func_ea) not in ("extern", ".plt"):
+    if idc.get_segm_name(func_ea) not in ("extern", ".plt"):
         return True
     return False 
 
@@ -692,11 +692,11 @@ def get_ida_symbols():
 
     for f in filter(ida_fcn_filter, Functions()):
         func     = get_func(f)
-        seg_name = SegName(f)
+        seg_name = idc.get_segm_name(f)
 
-        fn_name = GetFunctionName(f)
+        fn_name = idc.get_func_name(f)
         symbols.append(Symbol(fn_name, STB_GLOBAL_FUNC, 
-            int(func.startEA), int(func.size()), seg_name))
+            int(func.start_ea), int(func.size()), seg_name))
 
     return symbols
 
@@ -730,7 +730,9 @@ def get_r2_symbols():
 
 if USE_IDA:
 
-    from idc import *
+    import idc
+    import ida_nalt
+    import ida_kernwin
     from idaapi import *
     from idautils import *
 
@@ -744,7 +746,7 @@ if USE_IDA:
             'txtFile' : Form.FileInput(save=True, swidth=50)
         })
 
-            self.input_elf = GetInputFilePath()
+            self.input_elf = ida_nalt.get_input_file_path()
 
         def OnFormChange(self, fid):
             if fid == self.txtFile.id:
@@ -755,7 +757,7 @@ if USE_IDA:
                         "The output file already exists. " \
                         "Do you want to overwrite it?"
 
-                    if bool(AskUsingForm(s, "1")):
+                    if bool(ida_kernwin.ask_form(s, "1")):
                         os.remove(o_file)
                     else:
                         self.SetControlValue(self.txtFile, '')
