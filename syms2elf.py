@@ -683,16 +683,20 @@ def write_symbols(input_file, output_file, symbols):
         }
         bin.append_symbol(sym)
 
+        log("Adding symbols...")
         # add symbols  
+        sections = {}
         for s in symbols:
-
-            sh_idx = bin.get_section_id(s.shname)
+            sh_idx = sections.get(s.shname, -1)
+            if sh_idx == -1:
+                sh_idx = bin.get_section_id(s.shname)
+                sections[s.shname] = sh_idx
             if not sh_idx:
                 log("ERROR: Section ID for '%s' not found" % s.shname)
                 continue
 
             sym = {
-                "name"  : strtab_raw.index(s.name.encode('ascii')),
+                "name"  : sym_idxs[s.name.encode('ascii')],
                 "value" : s.value,
                 "size"  : s.size,
                 "info"  : s.info,
